@@ -19,13 +19,14 @@ The report TODOs, 8 through 10, are not tested here. Check those against the
 table in the assignment.
 """
 
+import importlib
 import unittest
 
 try:
-    import patch_audit as pa
+    pa = importlib.import_module("patch_audit")
 except ModuleNotFoundError:
     # the instructor copy of the program keeps its week06_ name
-    import week06_individual_patch_audit as pa
+    pa = importlib.import_module("week06_individual_patch_audit")
 
 
 class TestPatchLimit(unittest.TestCase):

@@ -59,6 +59,12 @@ def patch_limit(criticality: int) -> int:
     # TODO 1
     #   if / elif / else. Criticality 3 gets 14 days, criticality 2 gets 30,
     #   anything else gets 60.
+    if criticality == 3:
+        return 14
+    elif criticality == 2:
+        return 30
+    else:
+        return 60
     return 0
 
 
@@ -71,6 +77,15 @@ def patch_status(host: str, days: int, criticality: int, exempt: list[str]) -> s
     #      days is the limit or less          -> "COMPLIANT"
     #      days is twice the limit or less    -> "OVERDUE"
     #      anything else                      -> "CRITICAL"
+    if host in exempt:
+        return "EXEMPT"
+    limit = patch_limit(criticality)
+    if days <= limit:
+        return "COMPLIANT"
+    elif days <= 2 * limit:
+        return "OVERDUE"
+    elif days > 2 * limit:
+        return "CRITICAL"
     return "UNKNOWN"
 
 
@@ -78,7 +93,11 @@ def days_overdue(days: int, criticality: int) -> int:
     """Return how many days past the limit a host is, or 0 when it is not late."""
     # TODO 3
     #   Subtract the limit from days. If the answer is below 0, return 0.
-    return 0
+    limit = patch_limit(criticality)
+    overdue = days - limit
+    if overdue < 0:
+        return 0
+    return overdue
 
 
 # ---------------------------------------------------------------------------
@@ -91,14 +110,21 @@ def build_statuses(hosts: list[str], days: list[int], crits: list[int], exempt: 
     #   Start with an empty list. Loop over the positions with
     #      for i in range(len(hosts)):
     #   and use i to reach into all three lists. Append each status.
-    return []
+    statuses = []
+    for i in range(len(hosts)):
+        statuses.append(patch_status(hosts[i], days[i], crits[i], exempt))
+    return statuses
 
 
 def count_status(statuses: list[str], wanted: str) -> int:
     """Return how many entries in statuses equal wanted."""
     # TODO 5
     #   Start a counter at 0 and loop. Do not use the .count() method.
-    return 0
+    count = 0
+    for status in statuses:
+        if status == wanted:
+            count += 1
+    return count
 
 
 def hosts_with_status(hosts: list[str], statuses: list[str], wanted: str) -> list[str]:
@@ -106,7 +132,11 @@ def hosts_with_status(hosts: list[str], statuses: list[str], wanted: str) -> lis
     # TODO 6
     #   hosts and statuses line up, the same way the inventory does. Loop over
     #   the positions and append hosts[i] when statuses[i] is wanted.
-    return []
+    hosts_list = []
+    for i in range(len(hosts)):
+        if statuses[i] == wanted:
+            hosts_list.append(hosts[i])
+    return hosts_list
 
 
 def average_days(days: list[int], statuses: list[str]) -> float:
@@ -121,7 +151,7 @@ def average_days(days: list[int], statuses: list[str]) -> float:
         return 0.0
     total = 0
     count = 0
-    for i in range(1, len(statuses)):
+    for i in range(len(statuses)):
         if statuses[i] != "EXEMPT":
             total = total + days[i]
             count = count + 1
@@ -150,6 +180,8 @@ if __name__ == "__main__":
     #   Print one line for every host, lined up under the headings, using the
     #   same .ljust() widths. Numbers need str() first. The last column is
     #   days_overdue() for that host.
+    for i in range(len(HOSTS)):
+        print(HOSTS[i].ljust(16) + str(CRITICALITY[i]).ljust(6) + str(DAYS_SINCE_PATCH[i]).ljust(7) + statuses[i].ljust(11) + str(days_overdue(DAYS_SINCE_PATCH[i], CRITICALITY[i])))
 
     print()
     print("SUMMARY")
@@ -161,6 +193,16 @@ if __name__ == "__main__":
     #   The compliance rate is the COMPLIANT hosts as a percent of the hosts
     #   that are audited (every host that is not EXEMPT), rounded to 1 place.
     #   The verdict is PASS at 90 or more, AT RISK at 70 or more, FAIL below 70.
+    compliant_count = count_status(statuses, "COMPLIANT")
+    audited_count = len(HOSTS) - count_status(statuses, "EXEMPT")
+    if audited_count > 0:
+        rate = round((compliant_count / audited_count) * 100, 1)
+        if rate >= 90:
+            verdict = "PASS"
+        elif rate >= 70:
+            verdict = "AT RISK"
+        else:
+            verdict = "FAIL"
     rate = 0.0
     verdict = "UNKNOWN"
 
